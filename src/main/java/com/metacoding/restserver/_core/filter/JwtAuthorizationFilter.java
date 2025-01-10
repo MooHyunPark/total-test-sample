@@ -1,6 +1,7 @@
 package com.metacoding.restserver._core.filter;
 
 import com.auth0.jwt.exceptions.JWTDecodeException;
+import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metacoding.restserver._core.auth.LoginUser;
 import com.metacoding.restserver._core.util.JwtUtil;
@@ -28,24 +29,27 @@ public class JwtAuthorizationFilter implements Filter {
 
         String jwt = request.getHeader("Authorization");
 
-        if(jwt == null){
+        if (jwt == null) {
             onError(response, "토큰없어");
             return;
         }
 
-        if(!jwt.startsWith("Bearer ")){
+        if (!jwt.startsWith("Bearer ")) {
             onError(response, "프로토콜 잘못됨 혹은 공백일 수 없다");
             return;
         }
 
         try {
             LoginUser loginUser = jwtUtil.verify(jwt);
-            System.out.println("검증 후 id : "+loginUser.getId());
-            System.out.println("검증 후 username : "+loginUser.getUsername());
+            System.out.println("검증 후 id : " + loginUser.getId());
+            System.out.println("검증 후 username : " + loginUser.getUsername());
 
             HttpSession session = request.getSession();
             session.setAttribute("sessionUser", loginUser);
-        }catch (JWTDecodeException jwtDecodeException){
+        } catch (JWTDecodeException jwtDecodeException) {
+            onError(response, "토큰 무결성 실패");
+            return;
+        } catch (SignatureVerificationException se) {
             onError(response, "토큰 검증 실패");
             return;
         }
@@ -62,7 +66,7 @@ public class JwtAuthorizationFilter implements Filter {
             response.setContentType("application/json; charset=utf-8");
             PrintWriter out = response.getWriter();
             out.println(responseBody);
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
